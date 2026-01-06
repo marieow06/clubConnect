@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../classes/enums.dart';
-import 'forgotPassword.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 
 class Login extends StatefulWidget {
@@ -15,10 +18,91 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
 
+  // Map each school name to canonical id and student email domain
+  final Map<String, Map<String, String>> schoolInfo = {
+    'PC west': {
+      'id': 'PC_west',
+      'domain': '@student.putnamcityschools.edu'
+    },
+    'Western heights': {
+      'id': 'Western_heights',
+      'domain': '@student.whisd.org'
+    },
+    'Francis Tuttle': {
+      'id': 'Francis_Tuttle',
+      'domain': '@student.francistuttle.edu'
+    },
+  };
+
+  String? selelctSchool;
+
+  /*Tells the code (app) that these student emails and makes sure its the
+  correct one*/
+  AppRole getRoleForEmail(String email) {
+    const studentEmails = [
+      'aw1234568@student.francistuttle.edu',
+      'emily.i.liam@student.whisd.org',
+      'justin.k.sam@student.putnamcityschools.edu',
+    ];
+
+    return AppRole.student;
+  }
+
+  Future<void> _setupNotifications() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    // Ask permission
+    await messaging.requestPermission();
+
+    // Get device token
+    String? token = await messaging.getToken();
+
+    print('Student FCM Token: $token');
+
+    // Save token to Firestore
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    await FirebaseFirestore.instance
+        .collection('students')
+        .doc(uid)
+        .update({
+      'fcmToken': token,
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _setupNotifications();
+  }
+
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController schoolEmail = TextEditingController();
   final TextEditingController password = TextEditingController();
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  // 2. Define the Sign-In function
+  Future<void> _signInWithGoogle() async {
+    try {
+      // Triggers the popup where the user selects their account
+      final googleUser = await _googleSignIn.signIn();
+
+      if (googleUser != null) {
+        // Sign-in was successful!
+        print('Signed in as: ${googleUser.displayName}');
+        print('Email: ${googleUser.email}');
+
+        // Navigate to the home screen
+        if (mounted) {
+          Navigator.pushNamed(context, '/home');
+        }
+      }
+    } catch (error) {
+      print('Google Sign-In failed: $error');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +210,17 @@ class _LoginState extends State<Login> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your school email';
                             }
+                            if (!value.contains('@') || !value.contains('.')) {
+                              return 'Please enter a valid email address';
+                            }
+                            // Validate email domain against selected school
+                            if (selelctSchool != null) {
+                              String? domain = schoolInfo[selelctSchool]?['domain'];
+                              if (domain != null &&
+                                  !value.toLowerCase().endsWith(domain.toLowerCase())) {
+                                return 'Email must end with $domain for $selelctSchool';
+                              }
+                            }
                             return null;
                           }
                       ),
@@ -152,6 +247,40 @@ class _LoginState extends State<Login> {
                             return null;
                           }
                       ),
+                      SizedBox(height: 20.0),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Select School',
+                          labelStyle: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20.0,
+                          ),
+                          fillColor: Colors.white,
+                          filled: true,
+                          border: OutlineInputBorder(),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.black),
+                          ),
+                        ),
+                        value: selelctSchool,
+                        items: schoolInfo.keys.map((String school) {
+                          return DropdownMenuItem<String>(
+                            value: school,
+                            child: Text(school),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            selelctSchool = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a school';
+                          }
+                          return null;
+                        },
+                      ),
                       SizedBox(height: 10.0),
                       GestureDetector(
                         onTap: () {
@@ -171,17 +300,51 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 140.0),
+                      SizedBox(height: 100.0),
                       Center(
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_formKey.currentState!.validate()) {
-                              Navigator.pushNamed(context, '/home');
+                              try {
+                                // 1. Sign the user in with Firebase Auth
+                                final userCredential = await FirebaseAuth.instance
+                                    .signInWithEmailAndPassword(
+                                  email: schoolEmail.text.trim(),
+                                  password: password.text.trim(),
+                                );
+
+                                final user = userCredential.user;
+
+                                // 2. Determine role based on email (kept for compatibility)
+                                final role = getRoleForEmail(schoolEmail.text.trim());
+
+                                // 2. Save extra info in Firestore
+                                final canonicalSchoolId = schoolInfo[selelctSchool]?['id'];
+                                await FirebaseFirestore.instance
+                                    .collection('students')
+                                    .doc(user!.uid)
+                                    .set({
+                                  'email': user.email,
+                                  'schoolId': canonicalSchoolId, // canonical id
+                                  'role': 'student',
+                                }, SetOptions(merge: true));
+
+                                /*This is here so there is no back arrow when
+                                  the user signs in*/
+                                Navigator.pushReplacementNamed(context, '/home');
+
+                                // 3. Navigate to home
+                              } catch (e) {
+                                // Show error to user
+                                print('Error signing up: $e');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xFFFFDC79),
-                            minimumSize: Size(130, 50),
                           ),
                           child: Text(
                             'Submit',
@@ -193,7 +356,7 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 20.0),
+                      SizedBox(height: 9.0),
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(context, '/admin');
@@ -201,7 +364,7 @@ class _LoginState extends State<Login> {
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Text(
-                            'Admin or club leader?',
+                            'Are you an admin?',
                             style: TextStyle(
                               color: Color(0xFF7A4C10),
                               fontSize: 21.0,
@@ -210,15 +373,15 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 10.0),
+                      SizedBox(height: 1.0),
                       TextButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/createAcc');
+                          Navigator.pushNamed(context, '/register');
                         },
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Text(
-                            'Not signed in?',
+                            'Not logged in?',
                             style: TextStyle(
                               color: Color(0xFF7A4C10),
                               fontSize: 21.0,
