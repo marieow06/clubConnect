@@ -37,6 +37,10 @@ dependencies:
   googleapis: ^15.0.0
   google_sign_in: ^6.2.1
   firebase_auth: ^5.3.3
+  table_calendar: ^3.2.0
+  firebase_core: ^3.15.2
+  cloud_firestore: ^5.4.0
+  firebase_messaging: ^15.2.10
 
 dev_dependencies:
   flutter_test:
