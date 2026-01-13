@@ -15,7 +15,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
 
   String? userName;
-  String? photoUrl;
+  String? photoURL;
 
   Future<void> _loadUserProfile() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
@@ -28,7 +28,7 @@ class _HomeState extends State<Home> {
     if (doc.exists) {
       setState(() {
         userName = doc.data()?['name'];
-        photoUrl = doc.data()?['photoUrl'];
+        photoURL = doc.data()?['photoUrl'];
       });
     }
   }
@@ -74,6 +74,17 @@ class _HomeState extends State<Home> {
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              const Divider(
+                thickness: 1,
+                color: Colors.black,
+              ),
+              SizedBox(height: 15.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  
+                ],
               ),
             ],
           )
