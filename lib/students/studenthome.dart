@@ -231,7 +231,7 @@ class _HomeState extends State<Home> {
             TextButton(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.pushNamedAndRemoveUntil(context, '/Home', (route) => false);;
+                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);;
                 },
               style: TextButton.styleFrom(
                 alignment: Alignment.centerLeft,
@@ -240,7 +240,7 @@ class _HomeState extends State<Home> {
               child: Row(
                 children: [
                   Icon(
-                    Icons.groups,
+                    Icons.logout,
                     color: Colors.black,
                     size: 25.0,
                   ),
