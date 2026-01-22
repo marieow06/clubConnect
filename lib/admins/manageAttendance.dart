@@ -10,6 +10,41 @@ class manageAttendace extends StatefulWidget {
 
 class _manageAttendaceState extends State<manageAttendace> {
 
+  final List<String> _allClubs = [
+     'Musical',
+     'Art club',
+     'Chess club',
+     'Dance club',
+     'Choir',
+     'Debate club',
+     'Soccer club',
+     'Spanish club',
+     'Band club',
+     'Key club',
+     'Exchange club',
+     'STEM club',
+     'Cooking club',
+     'Anime club',
+     'Stuco club',
+     'Photographic club',
+     'Improv club',
+     'Ceramics club',
+     'Mathletes club',
+     'French club',
+     'Yearbook club',
+     'Fashion club',
+     'Book club',
+     'Robotics club',
+     'Tutoring club',
+     'Foreign languages club',
+     'Coding club',
+     'Poetry club',
+     'Film club',
+     'Humane Society Club',
+     'Tennis Club',
+     'Baseball Club',
+   ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -123,7 +158,7 @@ class _manageAttendaceState extends State<manageAttendace> {
             TextButton(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.pushNamedAndRemoveUntil(context, '/Admin', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(context, '/admin', (route) => false);
                 },
               style: TextButton.styleFrom(
                 alignment: Alignment.centerLeft,
@@ -149,6 +184,28 @@ class _manageAttendaceState extends State<manageAttendace> {
           ],
         ),
       ),
+        body: ListView.builder(
+         itemCount: _allClubs.length,
+         // Builds one list item per club
+         itemBuilder: (context, index) {
+           final clubName = _allClubs[index];
+           return Card(
+             margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+             child: ListTile(
+               title: Text(clubName),
+               trailing: const Icon
+                 (
+                   Icons.arrow_forward_ios,
+                   size: 16.0
+                 ),
+               onTap: () {
+                 // TODO: Navigate to the attendance page for the selected club
+                 print('Selected club: $clubName');
+               },
+             ),
+           );
+         },
+        ),
     );
   }
 }
