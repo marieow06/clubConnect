@@ -248,6 +248,33 @@ class _CalendarState extends State<Calendar> {
                 ],
               ),
             ),
+            const SizedBox(height: 1.0),
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                },
+              style: TextButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.logout,
+                    color: Colors.black,
+                    size: 25.0,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Sign out',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 25.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
